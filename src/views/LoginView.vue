@@ -9,33 +9,56 @@ const email = ref("");
 const password = ref("");
 const message = ref("");
 const loading = ref(false);
+const wakeUpHint = ref("");
+
+let hintTimer = null;
 
 const canSubmit = computed(() => email.value.trim() && password.value.trim());
 
+function startWakeUpHint() {
+  clearTimeout(hintTimer);
+  wakeUpHint.value = "";
+
+  hintTimer = setTimeout(() => {
+    wakeUpHint.value =
+      "El servidor esta tardando en responder. Puede estar despertandose, espera unos segundos mas.";
+  }, 5000);
+}
+
+function clearWakeUpHint() {
+  clearTimeout(hintTimer);
+  wakeUpHint.value = "";
+}
+
 async function login() {
-  if (!canSubmit.value) {
-    message.value = "Completá email y contraseña.";
+  if (!canSubmit.value || loading.value) {
+    message.value = "Completa email y contrasena.";
     return;
   }
 
   loading.value = true;
   message.value = "";
+  startWakeUpHint();
 
   try {
     const response = await api.post("/login", {
       email: email.value,
-      password: password.value
+      password: password.value,
     });
 
     localStorage.setItem("token", response.data.token);
     localStorage.setItem("userName", response.data.user.name);
     localStorage.setItem("userEmail", response.data.user.email);
+    message.value = "Acceso correcto. Entrando al panel...";
 
     router.push("/dashboard");
   } catch (error) {
-    message.value = error.response?.data?.message || "Error al iniciar sesión";
+    message.value =
+      error.response?.data?.message ||
+      "No pudimos iniciar sesion. Revisa tus datos o intenta de nuevo en unos segundos.";
   } finally {
     loading.value = false;
+    clearWakeUpHint();
   }
 }
 </script>
@@ -45,41 +68,62 @@ async function login() {
     <section class="auth-shell app-fade">
       <article class="auth-brand">
         <span class="eyebrow">TaskFlow</span>
-        <h1>Organizá proyectos, visualizá avances y trabajá con foco.</h1>
+        <h1>Organiza proyectos, visualiza avances y trabaja con foco.</h1>
         <p>
           Una interfaz pensada para que el seguimiento de tareas y estados se sienta claro,
-          rápido y profesional desde el primer vistazo.
+          rapido y profesional desde el primer vistazo.
         </p>
 
         <div class="feature-list">
-          <span>Dashboard con métricas</span>
+          <span>Dashboard con metricas</span>
           <span>Estados de proyecto</span>
-          <span>Edición rápida</span>
+          <span>Edicion rapida</span>
         </div>
       </article>
 
       <section class="auth-card">
         <span class="card-kicker">Acceso</span>
-        <h2>Iniciar sesión</h2>
-        <p>Entrá a tu espacio de trabajo y retomá tus proyectos.</p>
+        <h2>Iniciar sesion</h2>
+        <p>Entra a tu espacio de trabajo y retoma tus proyectos.</p>
 
-        <label class="field">
-          <span>Email</span>
-          <input v-model="email" type="email" placeholder="tuemail@mail.com" />
-        </label>
+        <form class="auth-form" @submit.prevent="login">
+          <label class="field">
+            <span>Email</span>
+            <input
+              v-model="email"
+              type="email"
+              placeholder="tuemail@mail.com"
+              :disabled="loading"
+            />
+          </label>
 
-        <label class="field">
-          <span>Contraseña</span>
-          <input v-model="password" type="password" placeholder="Tu contraseña" />
-        </label>
+          <label class="field">
+            <span>Contrasena</span>
+            <input
+              v-model="password"
+              type="password"
+              placeholder="Tu contrasena"
+              :disabled="loading"
+            />
+          </label>
 
-        <button @click="login" :disabled="loading" class="primary-btn">
-          {{ loading ? "Entrando..." : "Entrar a TaskFlow" }}
-        </button>
+          <button :disabled="loading || !canSubmit" class="primary-btn" type="submit">
+            <span v-if="loading" class="btn-loader" aria-hidden="true"></span>
+            {{ loading ? "Entrando..." : "Entrar a TaskFlow" }}
+          </button>
 
-        <p v-if="message" class="message">
-          {{ message }}
-        </p>
+          <p v-if="loading" class="pending-message">
+            Validando acceso y preparando tu panel...
+          </p>
+
+          <p v-if="wakeUpHint" class="hint-message">
+            {{ wakeUpHint }}
+          </p>
+
+          <p v-if="message" class="message">
+            {{ message }}
+          </p>
+        </form>
 
         <RouterLink to="/register" class="auth-link">
           No tengo cuenta, crear una ahora
@@ -183,6 +227,10 @@ async function login() {
   line-height: 1.7;
 }
 
+.auth-form {
+  display: grid;
+}
+
 .field {
   display: grid;
   gap: 8px;
@@ -203,6 +251,10 @@ input {
 }
 
 .primary-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
   width: 100%;
   margin-top: 10px;
   padding: 14px;
@@ -225,11 +277,41 @@ input {
   font-weight: 700;
 }
 
+.pending-message,
+.hint-message {
+  margin-top: 14px;
+  line-height: 1.7;
+  font-weight: 700;
+}
+
+.pending-message {
+  color: var(--primary);
+}
+
+.hint-message {
+  color: var(--muted);
+}
+
 .auth-link {
   display: inline-block;
   margin-top: 18px;
   color: var(--primary);
   font-weight: 800;
+}
+
+.btn-loader {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: white;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @media (max-width: 900px) {

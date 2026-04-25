@@ -12,26 +12,46 @@ const password = ref("");
 const loading = ref(false);
 const message = ref("");
 const success = ref(false);
+const wakeUpHint = ref("");
+
+let hintTimer = null;
 
 const canSubmit = computed(() =>
-  name.value.trim() && email.value.trim() && password.value.trim()
+  name.value.trim() && email.value.trim() && password.value.trim(),
 );
 
+function startWakeUpHint() {
+  clearTimeout(hintTimer);
+  wakeUpHint.value = "";
+
+  hintTimer = setTimeout(() => {
+    wakeUpHint.value =
+      "El servidor esta tardando en responder. Puede estar iniciandose, espera un poco mas.";
+  }, 5000);
+}
+
+function clearWakeUpHint() {
+  clearTimeout(hintTimer);
+  wakeUpHint.value = "";
+}
+
 async function register() {
-  if (!canSubmit.value) {
-    message.value = "Completá todos los campos.";
+  if (!canSubmit.value || loading.value) {
+    message.value = "Completa todos los campos.";
     success.value = false;
     return;
   }
 
   loading.value = true;
   message.value = "";
+  success.value = false;
+  startWakeUpHint();
 
   try {
     const response = await api.post("/register", {
       name: name.value,
       email: email.value,
-      password: password.value
+      password: password.value,
     });
 
     message.value = response.data.message;
@@ -49,6 +69,7 @@ async function register() {
     success.value = false;
   } finally {
     loading.value = false;
+    clearWakeUpHint();
   }
 }
 </script>
@@ -58,14 +79,14 @@ async function register() {
     <section class="auth-shell app-fade">
       <article class="auth-brand">
         <span class="eyebrow">Nuevo workspace</span>
-        <h1>Creá tu cuenta y empezá a seguir proyectos con una experiencia más clara.</h1>
+        <h1>Crea tu cuenta y empeza a seguir proyectos con una experiencia mas clara.</h1>
         <p>
           TaskFlow te permite registrar proyectos, cambiar estados, revisar avances y tener una
-          visión simple del trabajo activo desde un panel central.
+          vision simple del trabajo activo desde un panel central.
         </p>
 
         <div class="feature-list">
-          <span>Registro rápido</span>
+          <span>Registro rapido</span>
           <span>Dashboard visual</span>
           <span>Control de estados</span>
         </div>
@@ -74,37 +95,58 @@ async function register() {
       <section class="auth-card">
         <span class="card-kicker">Registro</span>
         <h2>Crear cuenta</h2>
-        <p>Configurá tu acceso para empezar a gestionar proyectos.</p>
+        <p>Configura tu acceso para empezar a gestionar proyectos.</p>
 
-        <label class="field">
-          <span>Nombre</span>
-          <input v-model="name" type="text" placeholder="Tu nombre" />
-        </label>
+        <form class="auth-form" @submit.prevent="register">
+          <label class="field">
+            <span>Nombre</span>
+            <input v-model="name" type="text" placeholder="Tu nombre" :disabled="loading" />
+          </label>
 
-        <label class="field">
-          <span>Email</span>
-          <input v-model="email" type="email" placeholder="tuemail@mail.com" />
-        </label>
+          <label class="field">
+            <span>Email</span>
+            <input
+              v-model="email"
+              type="email"
+              placeholder="tuemail@mail.com"
+              :disabled="loading"
+            />
+          </label>
 
-        <label class="field">
-          <span>Contraseña</span>
-          <input v-model="password" type="password" placeholder="Elegí una contraseña" />
-        </label>
+          <label class="field">
+            <span>Contrasena</span>
+            <input
+              v-model="password"
+              type="password"
+              placeholder="Eligi una contrasena"
+              :disabled="loading"
+            />
+          </label>
 
-        <button @click="register" :disabled="loading" class="primary-btn">
-          {{ loading ? "Registrando..." : "Crear cuenta" }}
-        </button>
+          <button :disabled="loading || !canSubmit" class="primary-btn" type="submit">
+            <span v-if="loading" class="btn-loader" aria-hidden="true"></span>
+            {{ loading ? "Registrando..." : "Crear cuenta" }}
+          </button>
 
-        <p
-          v-if="message"
-          class="message"
-          :class="{ success: success, error: !success }"
-        >
-          {{ message }}
-        </p>
+          <p v-if="loading" class="pending-message">
+            Creando tu cuenta y preparando el acceso...
+          </p>
+
+          <p v-if="wakeUpHint" class="hint-message">
+            {{ wakeUpHint }}
+          </p>
+
+          <p
+            v-if="message"
+            class="message"
+            :class="{ success: success, error: !success }"
+          >
+            {{ message }}
+          </p>
+        </form>
 
         <RouterLink to="/login" class="auth-link">
-          Ya tengo cuenta, iniciar sesión
+          Ya tengo cuenta, iniciar sesion
         </RouterLink>
       </section>
     </section>
@@ -205,6 +247,10 @@ async function register() {
   line-height: 1.7;
 }
 
+.auth-form {
+  display: grid;
+}
+
 .field {
   display: grid;
   gap: 8px;
@@ -225,6 +271,10 @@ input {
 }
 
 .primary-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
   width: 100%;
   margin-top: 10px;
   padding: 14px;
@@ -246,6 +296,21 @@ input {
   font-weight: 700;
 }
 
+.pending-message,
+.hint-message {
+  margin-top: 14px;
+  line-height: 1.7;
+  font-weight: 700;
+}
+
+.pending-message {
+  color: var(--primary);
+}
+
+.hint-message {
+  color: var(--muted);
+}
+
 .success {
   color: var(--success);
 }
@@ -259,6 +324,21 @@ input {
   margin-top: 18px;
   color: var(--primary);
   font-weight: 800;
+}
+
+.btn-loader {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: white;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @media (max-width: 900px) {

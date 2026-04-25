@@ -21,12 +21,15 @@ const statusFilter = ref("todos");
 
 const loading = ref(false);
 const errorMessage = ref("");
+const creating = ref(false);
+const updatingId = ref(null);
+const deletingId = ref(null);
+const actionMessage = ref("");
+const actionError = ref("");
 
 const filteredProjects = computed(() => {
-  return projects.value.filter(project => {
-    const matchesSearch = project.title
-      .toLowerCase()
-      .includes(search.value.toLowerCase());
+  return projects.value.filter((project) => {
+    const matchesSearch = project.title.toLowerCase().includes(search.value.toLowerCase());
 
     const matchesStatus =
       statusFilter.value === "todos" || project.status === statusFilter.value;
@@ -37,8 +40,8 @@ const filteredProjects = computed(() => {
 
 const summary = computed(() => ({
   total: projects.value.length,
-  active: projects.value.filter(project => project.status === "en progreso").length,
-  done: projects.value.filter(project => project.status === "finalizado").length
+  active: projects.value.filter((project) => project.status === "en progreso").length,
+  done: projects.value.filter((project) => project.status === "finalizado").length,
 }));
 
 function statusLabel(status) {
@@ -67,20 +70,32 @@ async function fetchProjects() {
 }
 
 async function addProject() {
-  if (!newTitle.value || !newDescription.value) return;
+  if (!newTitle.value.trim() || !newDescription.value.trim() || creating.value) {
+    actionError.value = "Completa titulo y descripcion para crear el proyecto.";
+    actionMessage.value = "";
+    return;
+  }
+
+  creating.value = true;
+  actionMessage.value = "";
+  actionError.value = "";
 
   try {
     await api.post("/projects", {
       title: newTitle.value,
-      description: newDescription.value
+      description: newDescription.value,
     });
 
     newTitle.value = "";
     newDescription.value = "";
+    actionMessage.value = "Proyecto creado correctamente.";
 
-    fetchProjects();
+    await fetchProjects();
   } catch (error) {
+    actionError.value = "No se pudo crear el proyecto.";
     console.log("Error al crear proyecto", error);
+  } finally {
+    creating.value = false;
   }
 }
 
@@ -89,6 +104,8 @@ function startEdit(project) {
   editTitle.value = project.title;
   editDescription.value = project.description;
   editStatus.value = project.status;
+  actionMessage.value = "";
+  actionError.value = "";
 }
 
 function cancelEdit() {
@@ -99,30 +116,52 @@ function cancelEdit() {
 }
 
 async function updateProject(id) {
+  if (!editTitle.value.trim() || !editDescription.value.trim() || updatingId.value) {
+    actionError.value = "Completa los campos antes de guardar.";
+    actionMessage.value = "";
+    return;
+  }
+
+  updatingId.value = id;
+  actionMessage.value = "";
+  actionError.value = "";
+
   try {
     await api.put(`/projects/${id}`, {
       title: editTitle.value,
       description: editDescription.value,
-      status: editStatus.value
+      status: editStatus.value,
     });
 
     cancelEdit();
-    fetchProjects();
+    actionMessage.value = "Proyecto actualizado.";
+    await fetchProjects();
   } catch (error) {
+    actionError.value = "No se pudo actualizar el proyecto.";
     console.log("Error al actualizar proyecto", error);
+  } finally {
+    updatingId.value = null;
   }
 }
 
 async function deleteProject(id) {
-  const confirmDelete = confirm("¿Seguro que querés eliminar este proyecto?");
+  const confirmDelete = confirm("Seguro que queres eliminar este proyecto?");
 
   if (!confirmDelete) return;
 
+  deletingId.value = id;
+  actionMessage.value = "";
+  actionError.value = "";
+
   try {
     await api.delete(`/projects/${id}`);
-    fetchProjects();
+    actionMessage.value = "Proyecto eliminado.";
+    await fetchProjects();
   } catch (error) {
+    actionError.value = "No se pudo eliminar el proyecto.";
     console.log("Error al eliminar", error);
+  } finally {
+    deletingId.value = null;
   }
 }
 
@@ -139,8 +178,8 @@ onMounted(() => {
       <header class="page-header">
         <div>
           <span class="eyebrow">Proyectos</span>
-          <h1>Seguimiento, edición y control del estado de cada entrega.</h1>
-          <p>Gestioná tus proyectos desde un tablero más limpio y accionable.</p>
+          <h1>Seguimiento, edicion y control del estado de cada entrega.</h1>
+          <p>Gestiona tus proyectos desde un tablero mas limpio y accionable.</p>
         </div>
 
         <div class="summary-card">
@@ -158,23 +197,30 @@ onMounted(() => {
             </div>
           </div>
 
-          <div class="field-grid">
+          <form class="field-grid" @submit.prevent="addProject">
             <label class="field">
-              <span>Título</span>
-              <input v-model="newTitle" placeholder="Ej. Landing para producto SaaS" />
+              <span>Titulo</span>
+              <input
+                v-model="newTitle"
+                placeholder="Ej. Landing para producto SaaS"
+                :disabled="creating"
+              />
             </label>
 
             <label class="field">
-              <span>Descripción</span>
+              <span>Descripcion</span>
               <textarea
                 v-model="newDescription"
                 rows="5"
-                placeholder="Describí qué resuelve o qué objetivo tiene el proyecto"
+                placeholder="Describi que resuelve o que objetivo tiene el proyecto"
+                :disabled="creating"
               />
             </label>
-          </div>
 
-          <button @click="addProject" class="primary-btn">Agregar proyecto</button>
+            <button :disabled="creating" class="primary-btn" type="submit">
+              {{ creating ? "Guardando..." : "Agregar proyecto" }}
+            </button>
+          </form>
         </article>
 
         <article class="panel board-panel">
@@ -202,6 +248,14 @@ onMounted(() => {
             {{ errorMessage }}
           </p>
 
+          <p v-if="actionMessage" class="success-message">
+            {{ actionMessage }}
+          </p>
+
+          <p v-if="actionError" class="error-message">
+            {{ actionError }}
+          </p>
+
           <p v-if="!loading && filteredProjects.length === 0" class="empty-message">
             No hay proyectos para mostrar.
           </p>
@@ -222,30 +276,42 @@ onMounted(() => {
                 </div>
               </div>
 
-              <div v-else class="edit-form">
-                <input v-model="editTitle" />
-                <textarea v-model="editDescription" rows="4" />
+              <form
+                v-else
+                class="edit-form"
+                @submit.prevent="updateProject(project._id)"
+              >
+                <input v-model="editTitle" :disabled="updatingId === project._id" />
+                <textarea
+                  v-model="editDescription"
+                  rows="4"
+                  :disabled="updatingId === project._id"
+                />
 
-                <select v-model="editStatus">
+                <select v-model="editStatus" :disabled="updatingId === project._id">
                   <option value="pendiente">Pendiente</option>
                   <option value="en progreso">En progreso</option>
                   <option value="finalizado">Finalizado</option>
                 </select>
-              </div>
+
+                <div class="actions">
+                  <button class="success-btn" type="submit" :disabled="updatingId === project._id">
+                    {{ updatingId === project._id ? "Guardando..." : "Guardar" }}
+                  </button>
+                  <button class="secondary-btn" type="button" @click="cancelEdit">
+                    Cancelar
+                  </button>
+                </div>
+              </form>
 
               <div class="actions" v-if="editingId !== project._id">
                 <button @click="startEdit(project)" class="secondary-btn">Editar</button>
-                <button class="danger-btn" @click="deleteProject(project._id)">
-                  Eliminar
-                </button>
-              </div>
-
-              <div class="actions" v-else>
-                <button class="success-btn" @click="updateProject(project._id)">
-                  Guardar
-                </button>
-                <button class="secondary-btn" @click="cancelEdit">
-                  Cancelar
+                <button
+                  class="danger-btn"
+                  @click="deleteProject(project._id)"
+                  :disabled="deletingId === project._id"
+                >
+                  {{ deletingId === project._id ? "Eliminando..." : "Eliminar" }}
                 </button>
               </div>
             </li>
@@ -396,6 +462,14 @@ textarea {
   background: linear-gradient(135deg, #15803d, #22c55e);
 }
 
+.primary-btn:disabled,
+.secondary-btn:disabled,
+.danger-btn:disabled,
+.success-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
 .filters {
   display: flex;
   gap: 10px;
@@ -473,7 +547,8 @@ textarea {
 
 .info-message,
 .empty-message,
-.error-message {
+.error-message,
+.success-message {
   text-align: center;
   font-weight: 800;
   margin: 20px 0;
@@ -485,6 +560,10 @@ textarea {
 
 .error-message {
   color: var(--danger);
+}
+
+.success-message {
+  color: var(--success);
 }
 
 @media (max-width: 1150px) {
