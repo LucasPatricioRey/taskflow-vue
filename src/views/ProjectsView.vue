@@ -3,6 +3,7 @@ import { ref, onMounted, computed } from "vue";
 import api from "../services/api";
 import Sidebar from "../components/Sidebar.vue";
 import { useRouter } from "vue-router";
+
 const router = useRouter();
 
 const projects = ref([]);
@@ -33,6 +34,22 @@ const filteredProjects = computed(() => {
     return matchesSearch && matchesStatus;
   });
 });
+
+const summary = computed(() => ({
+  total: projects.value.length,
+  active: projects.value.filter(project => project.status === "en progreso").length,
+  done: projects.value.filter(project => project.status === "finalizado").length
+}));
+
+function statusLabel(status) {
+  if (status === "pendiente") return "Pendiente";
+  if (status === "en progreso") return "En progreso";
+  return "Finalizado";
+}
+
+function statusClass(status) {
+  return status.replaceAll(" ", "-");
+}
 
 async function fetchProjects() {
   loading.value = true;
@@ -118,78 +135,122 @@ onMounted(() => {
   <main class="layout">
     <Sidebar />
 
-    <section class="content">
-      <header class="header">
-        <h1>Proyectos</h1>
-        <p>Gestioná tus proyectos</p>
+    <section class="content app-fade">
+      <header class="page-header">
+        <div>
+          <span class="eyebrow">Proyectos</span>
+          <h1>Seguimiento, edición y control del estado de cada entrega.</h1>
+          <p>Gestioná tus proyectos desde un tablero más limpio y accionable.</p>
+        </div>
+
+        <div class="summary-card">
+          <strong>{{ summary.total }}</strong>
+          <p>proyectos registrados · {{ summary.active }} activos · {{ summary.done }} cerrados</p>
+        </div>
       </header>
 
-      <section class="card">
-        <div class="form">
-          <input v-model="newTitle" placeholder="Título" />
-          <input v-model="newDescription" placeholder="Descripción" />
-          <button @click="addProject">Agregar</button>
-        </div>
-
-        <div class="filters">
-          <input v-model="search" placeholder="Buscar proyecto..." />
-
-          <select v-model="statusFilter">
-            <option value="todos">Todos</option>
-            <option value="pendiente">Pendientes</option>
-            <option value="en progreso">En progreso</option>
-            <option value="finalizado">Finalizados</option>
-          </select>
-        </div>
-
-        <p v-if="loading" class="info-message">Cargando proyectos...</p>
-
-        <p v-if="errorMessage" class="error-message">
-          {{ errorMessage }}
-        </p>
-
-        <p v-if="!loading && filteredProjects.length === 0" class="empty-message">
-          No hay proyectos para mostrar.
-        </p>
-
-        <ul v-if="!loading && filteredProjects.length > 0">
-          <li v-for="project in filteredProjects" :key="project._id">
-            <div v-if="editingId !== project._id" class="project-info">
-              <strong @click="router.push(`/projects/${project._id}`)" style="cursor:pointer;">
-  {{ project.title }}
-</strong>
-              <p>{{ project.description }}</p>
-              <span>{{ project.status }}</span>
+      <section class="workspace-grid">
+        <article class="panel composer-panel">
+          <div class="panel-head">
+            <div>
+              <span class="panel-kicker">Nuevo proyecto</span>
+              <h2>Agregar proyecto</h2>
             </div>
+          </div>
 
-            <div v-else class="edit-form">
-              <input v-model="editTitle" />
-              <input v-model="editDescription" />
+          <div class="field-grid">
+            <label class="field">
+              <span>Título</span>
+              <input v-model="newTitle" placeholder="Ej. Landing para producto SaaS" />
+            </label>
 
-              <select v-model="editStatus">
-                <option value="pendiente">Pendiente</option>
-                <option value="en progreso">En progreso</option>
-                <option value="finalizado">Finalizado</option>
-              </select>
+            <label class="field">
+              <span>Descripción</span>
+              <textarea
+                v-model="newDescription"
+                rows="5"
+                placeholder="Describí qué resuelve o qué objetivo tiene el proyecto"
+              />
+            </label>
+          </div>
+
+          <button @click="addProject" class="primary-btn">Agregar proyecto</button>
+        </article>
+
+        <article class="panel board-panel">
+          <div class="panel-head">
+            <div>
+              <span class="panel-kicker">Tablero</span>
+              <h2>Listado de proyectos</h2>
             </div>
+          </div>
 
-            <div class="actions" v-if="editingId !== project._id">
-              <button @click="startEdit(project)">Editar</button>
-              <button class="danger" @click="deleteProject(project._id)">
-                Eliminar
-              </button>
-            </div>
+          <div class="filters">
+            <input v-model="search" placeholder="Buscar proyecto..." />
 
-            <div class="actions" v-else>
-              <button class="success" @click="updateProject(project._id)">
-                Guardar
-              </button>
-              <button class="danger" @click="cancelEdit">
-                Cancelar
-              </button>
-            </div>
-          </li>
-        </ul>
+            <select v-model="statusFilter">
+              <option value="todos">Todos</option>
+              <option value="pendiente">Pendientes</option>
+              <option value="en progreso">En progreso</option>
+              <option value="finalizado">Finalizados</option>
+            </select>
+          </div>
+
+          <p v-if="loading" class="info-message">Cargando proyectos...</p>
+
+          <p v-if="errorMessage" class="error-message">
+            {{ errorMessage }}
+          </p>
+
+          <p v-if="!loading && filteredProjects.length === 0" class="empty-message">
+            No hay proyectos para mostrar.
+          </p>
+
+          <ul v-if="!loading && filteredProjects.length > 0" class="projects-list">
+            <li v-for="project in filteredProjects" :key="project._id" class="project-card">
+              <div v-if="editingId !== project._id" class="project-info">
+                <div class="project-header">
+                  <div>
+                    <strong @click="router.push(`/projects/${project._id}`)" class="project-link">
+                      {{ project.title }}
+                    </strong>
+                    <p>{{ project.description }}</p>
+                  </div>
+                  <span class="status-pill" :class="statusClass(project.status)">
+                    {{ statusLabel(project.status) }}
+                  </span>
+                </div>
+              </div>
+
+              <div v-else class="edit-form">
+                <input v-model="editTitle" />
+                <textarea v-model="editDescription" rows="4" />
+
+                <select v-model="editStatus">
+                  <option value="pendiente">Pendiente</option>
+                  <option value="en progreso">En progreso</option>
+                  <option value="finalizado">Finalizado</option>
+                </select>
+              </div>
+
+              <div class="actions" v-if="editingId !== project._id">
+                <button @click="startEdit(project)" class="secondary-btn">Editar</button>
+                <button class="danger-btn" @click="deleteProject(project._id)">
+                  Eliminar
+                </button>
+              </div>
+
+              <div class="actions" v-else>
+                <button class="success-btn" @click="updateProject(project._id)">
+                  Guardar
+                </button>
+                <button class="secondary-btn" @click="cancelEdit">
+                  Cancelar
+                </button>
+              </div>
+            </li>
+          </ul>
+        </article>
       </section>
     </section>
   </main>
@@ -199,153 +260,263 @@ onMounted(() => {
 .layout {
   min-height: 100vh;
   display: flex;
-  background: #f1f5f9;
 }
 
 .content {
   flex: 1;
-  padding: 36px;
+  padding: 34px;
 }
 
-.header {
-  margin-bottom: 20px;
+.page-header {
+  display: grid;
+  grid-template-columns: 1.2fr 0.65fr;
+  gap: 18px;
+  margin-bottom: 24px;
 }
 
-.header h1 {
-  font-size: 30px;
-  color: #0f172a;
+.eyebrow,
+.panel-kicker {
+  display: inline-block;
+  margin-bottom: 10px;
+  color: var(--primary);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 0.76rem;
+  font-weight: 800;
 }
 
-.header p {
-  color: #64748b;
+.page-header h1 {
+  max-width: 18ch;
+  margin-bottom: 10px;
+  font-size: clamp(2.1rem, 2.8vw, 3.6rem);
+  line-height: 1.04;
 }
 
-.card {
-  background: white;
+.page-header p {
+  color: var(--muted);
+  line-height: 1.8;
+}
+
+.summary-card,
+.panel {
+  border-radius: 28px;
+  border: 1px solid rgba(22, 33, 29, 0.08);
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: var(--shadow-md);
+}
+
+.summary-card {
   padding: 24px;
-  border-radius: 18px;
+  display: grid;
+  align-content: center;
+  background:
+    radial-gradient(circle at top right, rgba(15, 118, 110, 0.14), transparent 42%),
+    rgba(255, 255, 255, 0.78);
 }
 
-.form,
-.filters {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
+.summary-card strong {
+  margin-bottom: 8px;
+  font-size: clamp(2.4rem, 1.9rem + 2vw, 4rem);
+}
+
+.workspace-grid {
+  display: grid;
+  grid-template-columns: 0.82fr 1.18fr;
+  gap: 18px;
+}
+
+.panel {
+  padding: 24px;
+}
+
+.panel-head {
+  margin-bottom: 18px;
+}
+
+.panel-head h2 {
+  font-size: 1.55rem;
+}
+
+.field-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.field {
+  display: grid;
+  gap: 8px;
+}
+
+.field span {
+  color: var(--muted);
+  font-size: 0.95rem;
 }
 
 input,
-select {
-  flex: 1;
-  padding: 10px;
-  border-radius: 10px;
-  border: 1px solid #ccc;
+select,
+textarea {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(22, 33, 29, 0.12);
+  background: rgba(255, 255, 255, 0.92);
 }
 
-button {
-  padding: 10px 14px;
-  border-radius: 10px;
+textarea {
+  resize: vertical;
+}
+
+.primary-btn,
+.secondary-btn,
+.danger-btn,
+.success-btn {
+  padding: 12px 16px;
   border: none;
-  background: #2563eb;
+  border-radius: 14px;
   color: white;
+  font-weight: 800;
   cursor: pointer;
-  font-weight: bold;
 }
 
-.danger {
-  background: #ef4444;
+.primary-btn {
+  width: 100%;
+  margin-top: 16px;
+  background: linear-gradient(135deg, var(--primary), #14b8a6);
 }
 
-.success {
-  background: #16a34a;
+.secondary-btn {
+  background: linear-gradient(135deg, #475569, #64748b);
 }
 
-ul {
+.danger-btn {
+  background: linear-gradient(135deg, #dc2626, #ef4444);
+}
+
+.success-btn {
+  background: linear-gradient(135deg, #15803d, #22c55e);
+}
+
+.filters {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.projects-list {
   list-style: none;
-  padding: 0;
+  display: grid;
+  gap: 12px;
 }
 
-li {
+.project-card {
+  padding: 18px;
+  border-radius: 22px;
+  border: 1px solid rgba(22, 33, 29, 0.08);
+  background: rgba(243, 245, 239, 0.98);
+}
+
+.project-header {
   display: flex;
   justify-content: space-between;
-  gap: 14px;
-  margin-bottom: 10px;
-  padding: 14px;
-  border: 1px solid #eee;
-  border-radius: 14px;
-  transition: 0.2s;
+  gap: 16px;
 }
 
-li:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
-}
-
-.project-info {
-  flex: 1;
-}
-
-.project-info p {
-  color: #475569;
-  margin: 6px 0;
-}
-
-.project-info span {
+.project-link {
   display: inline-block;
-  background: #e0f2fe;
-  color: #0369a1;
-  padding: 4px 9px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  font-size: 1.06rem;
+}
+
+.project-info p,
+.info-message,
+.empty-message {
+  color: var(--muted);
+  line-height: 1.8;
+}
+
+.status-pill {
+  align-self: start;
+  padding: 8px 12px;
   border-radius: 999px;
-  font-size: 13px;
-  font-weight: bold;
+  font-size: 0.8rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.pendiente {
+  background: #fff3d6;
+  color: #b45309;
+}
+
+.en-progreso {
+  background: #dff5ff;
+  color: #0369a1;
+}
+
+.finalizado {
+  background: #dcfce7;
+  color: #166534;
 }
 
 .edit-form {
-  flex: 1;
-  display: flex;
-  gap: 8px;
+  display: grid;
+  gap: 10px;
 }
 
 .actions {
   display: flex;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
 }
 
 .info-message,
 .empty-message,
 .error-message {
   text-align: center;
-  font-weight: bold;
+  font-weight: 800;
   margin: 20px 0;
 }
 
 .info-message {
-  color: #2563eb;
-}
-
-.empty-message {
-  color: #64748b;
+  color: var(--primary);
 }
 
 .error-message {
-  color: #ef4444;
+  color: var(--danger);
 }
 
-@media (max-width: 760px) {
+@media (max-width: 1150px) {
+  .page-header,
+  .workspace-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .page-header h1 {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 900px) {
   .layout {
     flex-direction: column;
   }
+}
 
+@media (max-width: 640px) {
   .content {
-    padding: 24px;
+    padding: 20px;
   }
 
-  .form,
   .filters,
-  li,
-  .edit-form,
+  .project-header,
   .actions {
     flex-direction: column;
-    align-items: stretch;
+  }
+
+  .status-pill {
+    white-space: normal;
   }
 }
 </style>
