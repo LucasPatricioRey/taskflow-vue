@@ -15,7 +15,7 @@ Aplicación full stack desarrollada como proyecto de portfolio que permite gesti
 
 ![Vista previa](/public/vistaPrevia.png)
 
-![Vista previa](vistaPrevia2.png)
+![Vista previa](/public/vistaPrevia2.png)
 
 ---
 
