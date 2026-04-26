@@ -9,8 +9,10 @@ Aplicacion full stack para gestionar proyectos con autenticacion, dashboard y CR
 
 ## Vista previa
 
-![Vista previa principal](./public/vistaPrevia.png)
-![Vista previa secundaria](./public/vistaPrevia2.png)
+![Vista previa principal](./public/vistaPrevia.jpeg)
+![Vista previa secundaria](./public/vistaPrevia2.jpeg)
+![Vista previa de acceso](./public/vistaPrevia3.jpeg)
+![Vista previa de registro](./public/vistaPrevia4.jpeg)
 
 ## Funcionalidades
 
