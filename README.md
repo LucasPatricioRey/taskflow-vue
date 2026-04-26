@@ -4,7 +4,7 @@ Aplicacion full stack para gestionar proyectos con autenticacion, dashboard y CR
 
 ## Demo
 
-- Frontend: https://taskflow-vue-lucas.netlify.app
+- Frontend: https://taskflow-vue-nine.vercel.app
 - Backend: https://backend-portafolio-r87v.onrender.com
 
 ## Vista previa
