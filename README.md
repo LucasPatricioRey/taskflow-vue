@@ -1,81 +1,52 @@
-# 🚀 TaskFlow - App de Gestión de Proyectos
+# TaskFlow Vue
 
-Aplicación full stack desarrollada como proyecto de portfolio que permite gestionar proyectos de manera profesional. Incluye autenticación con JWT, base de datos en MongoDB y una interfaz moderna con Vue.js.
+Aplicacion full stack para gestionar proyectos con autenticacion, dashboard y CRUD completo.
 
----
+## Demo
 
-## 🌐 Demo en vivo
+- Frontend: https://taskflow-vue-lucas.netlify.app
+- Backend: https://backend-portafolio-r87v.onrender.com
 
-🔗 Frontend: https://taskflow-vue-lucas.netlify.app  
-🔗 Backend: https://backend-portafolio-r87v.onrender.com  
+## Vista previa
 
----
+![Vista previa principal](./public/vistaPrevia.png)
+![Vista previa secundaria](./public/vistaPrevia2.png)
 
-## 👀 Vista previa
+## Funcionalidades
 
-![Vista previa](/public/vistaPrevia.png)
+- Registro e inicio de sesion
+- Rutas protegidas
+- Dashboard con estadisticas
+- CRUD de proyectos
+- Vista de detalle
+- Manejo de sesion con token
+- Soporte multiusuario
 
-![Vista previa](/public/vistaPrevia2.png)
-
----
-
-## 🧠 Funcionalidades
-
-- Registro de usuarios
-- Login con autenticación JWT
-- Protección de rutas
-- CRUD completo de proyectos
-- Dashboard con estadísticas
-- Filtros y búsqueda en tiempo real
-- Edición y eliminación de proyectos
-- Vista detallada de proyectos
-- Manejo de sesión (login/logout)
-- Multiusuario (cada usuario ve sus propios datos)
-- Persistencia de datos en MongoDB
-
----
-
-## 🛠️ Tecnologías utilizadas
+## Stack
 
 ### Frontend
+
 - Vue 3
 - Vue Router
 - Axios
-- CSS moderno (responsive UI)
+- CSS responsive
 
-### Backend
+### Backend relacionado
+
 - Node.js
 - Express
 - MongoDB Atlas
-- JWT (jsonwebtoken)
+- JWT
 - bcrypt
-- dotenv
-- cors
 
-### Deploy
-- Netlify (Frontend)
-- Render (Backend)
+## Ejecutar en local
 
----
+```bash
+npm install
+npm run dev
+```
 
-## 🔐 Autenticación
+## Notas
 
-Se implementa autenticación mediante JSON Web Tokens (JWT):
-
-1. El usuario inicia sesión
-2. El servidor genera un token
-3. El frontend guarda el token en `localStorage`
-4. Las rutas protegidas requieren ese token
-5. Se implementa interceptor para manejo automático de sesión
-
----
-
-## ⚡ Características destacadas
-
-- Aplicación SPA (Single Page Application)
-- Arquitectura cliente-servidor
-- Manejo de estado reactivo
-- Interfaz tipo dashboard profesional
-- Sistema multiusuario real
-- Comunicación API REST
-
+- El frontend consume el backend desplegado en Render.
+- Para deploy en Vercel o Netlify se incluye configuracion SPA.
