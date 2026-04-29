@@ -65,7 +65,10 @@ async function register() {
       router.push("/login");
     }, 1000);
   } catch (error) {
-    message.value = error.response?.data?.message || "Error al registrar usuario";
+    message.value =
+      error.userMessage ||
+      error.response?.data?.message ||
+      "No pudimos registrar el usuario. Intenta nuevamente en unos segundos.";
     success.value = false;
   } finally {
     loading.value = false;

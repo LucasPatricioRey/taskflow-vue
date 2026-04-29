@@ -54,6 +54,7 @@ async function login() {
     router.push("/dashboard");
   } catch (error) {
     message.value =
+      error.userMessage ||
       error.response?.data?.message ||
       "No pudimos iniciar sesion. Revisa tus datos o intenta de nuevo en unos segundos.";
   } finally {
