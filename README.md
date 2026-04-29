@@ -48,7 +48,20 @@ npm install
 npm run dev
 ```
 
+## Variables de entorno
+
+Crear un archivo `.env` usando como base `.env.example`:
+
+```env
+VITE_API_URL=https://backend-portafolio-r87v.onrender.com
+```
+
 ## Notas
 
 - El frontend consume el backend desplegado en Render.
+- Si el backend esta en cold start, la primera respuesta puede tardar. La app muestra un mensaje y reintenta una vez automaticamente.
 - Para deploy en Vercel o Netlify se incluye configuracion SPA.
+
+## Licencia
+
+MIT
